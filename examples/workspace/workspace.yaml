@@ -1,0 +1,21 @@
+apiVersion: coder.coderworkspaces.crossplane.io/v1alpha1
+kind: Workspace
+metadata:
+  name: my-new-workspace-horst-2
+  namespace: crossplane-system
+spec:
+  forProvider:
+    image_id: "codercom/code-server:latest"
+    org_id: "org-1234"
+    image_tag: "latest"
+    cpu_cores: "1"
+    memory_gb: "2Gi"
+    disk_gb: 10
+    gpus: 0
+    use_container_vm: true
+    resource_pool_id: "rp-1234"
+    namespace: "coder-horst"
+    autostart_enabled: false
+
+  providerConfigRef:
+    name: example

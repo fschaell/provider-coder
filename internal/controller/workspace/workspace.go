@@ -34,8 +34,9 @@ import (
 
 	"github.com/crossplane/provider-coderworkspaces/apis/coder/v1alpha1"
 	apisv1alpha1 "github.com/crossplane/provider-coderworkspaces/apis/v1alpha1"
-	//@todo muss angepasst werden - remove controller
+
 	"github.com/crossplane/provider-coderworkspaces/internal/features"
+	"github.com/go-resty/resty/v2"
 )
 
 const (
@@ -47,11 +48,18 @@ const (
 	errNewClient = "cannot create new Service"
 )
 
-// A NoOpService does nothing.
-type NoOpService struct{}
+// A CoderService does nothing.
+type CoderService struct {
+	pCLI *resty.Client
+}
 
 var (
-	newNoOpService = func(_ []byte) (interface{}, error) { return &NoOpService{}, nil }
+	newCoderService = func(creds []byte) (*CoderService, error) {
+		client := resty.New()
+		return &CoderService{
+			pCLI: client,
+		}, nil
+	}
 )
 
 // Setup adds a controller that reconciles Workspace managed resources.
@@ -68,7 +76,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		managed.WithExternalConnecter(&connector{
 			kube:         mgr.GetClient(),
 			usage:        resource.NewProviderConfigUsageTracker(mgr.GetClient(), &apisv1alpha1.ProviderConfigUsage{}),
-			newServiceFn: newNoOpService}),
+			newServiceFn: newCoderService}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
 		managed.WithPollInterval(o.PollInterval),
 		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
@@ -87,7 +95,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 type connector struct {
 	kube         client.Client
 	usage        resource.Tracker
-	newServiceFn func(creds []byte) (interface{}, error)
+	newServiceFn func(creds []byte) (*CoderService, error)
 }
 
 // Connect typically produces an ExternalClient by:
@@ -129,7 +137,7 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 type external struct {
 	// A 'client' used to connect to the external resource API. In practice this
 	// would be something like an AWS SDK client.
-	service interface{}
+	service *CoderService
 }
 
 func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
@@ -164,7 +172,23 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalCreation{}, errors.New(errNotWorkspace)
 	}
 
-	fmt.Printf("Creating: %+v", cr)
+	fmt.Printf("Creating: %+v")
+	fmt.Println()
+	fmt.Println("\n  Namespace      :", cr.Spec.ForProvider.Namespace)
+	fmt.Println("\n  EnableAutoStart:", cr.Spec.ForProvider.EnableAutoStart)
+	fmt.Println()
+	resp, err := c.service.pCLI.R().EnableTrace().Get("https://httpbin.org/get")
+
+	// Explore response object
+	fmt.Println("Response Info:")
+	fmt.Println("  Error      :", err)
+	fmt.Println("  Status Code:", resp.StatusCode())
+	fmt.Println("  Status     :", resp.Status())
+	fmt.Println("  Proto      :", resp.Proto())
+	fmt.Println("  Time       :", resp.Time())
+	fmt.Println("  Received At:", resp.ReceivedAt())
+	fmt.Println("  Body       :\n", resp)
+	fmt.Println()
 
 	return managed.ExternalCreation{
 		// Optionally return any details that may be required to connect to the

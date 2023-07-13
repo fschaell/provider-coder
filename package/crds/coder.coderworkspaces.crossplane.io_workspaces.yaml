@@ -69,10 +69,49 @@ spec:
                 description: WorkspaceParameters are the configurable fields of a
                   Workspace.
                 properties:
-                  configurableField:
+                  autostart_enabled:
+                    type: boolean
+                  cpu_cores:
                     type: string
+                  disk_gb:
+                    type: integer
+                  for_user_id:
+                    description: ForUserID is an optional param to create a workspace
+                      for another user other than the requester. This only works for
+                      admins and site managers.
+                    type: string
+                  gpus:
+                    type: integer
+                  image_id:
+                    type: string
+                  image_tag:
+                    type: string
+                  memory_gb:
+                    type: string
+                  namespace:
+                    type: string
+                  org_id:
+                    type: string
+                  resource_pool_id:
+                    type: string
+                  template_id:
+                    description: TemplateID comes from the parse template route on
+                      cemanager.
+                    type: string
+                  use_container_vm:
+                    type: boolean
                 required:
-                - configurableField
+                - autostart_enabled
+                - cpu_cores
+                - disk_gb
+                - gpus
+                - image_id
+                - image_tag
+                - memory_gb
+                - namespace
+                - org_id
+                - resource_pool_id
+                - use_container_vm
                 type: object
               managementPolicy:
                 default: FullControl
@@ -266,8 +305,12 @@ spec:
               atProvider:
                 description: WorkspaceObservation are the observable fields of a Workspace.
                 properties:
+                  latest_stat:
+                    type: string
                   observableField:
                     type: string
+                required:
+                - latest_stat
                 type: object
               conditions:
                 description: Conditions of the resource.

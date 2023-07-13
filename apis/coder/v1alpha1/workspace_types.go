@@ -17,21 +17,39 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"reflect"
-
+	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
+	"reflect"
 )
 
 // WorkspaceParameters are the configurable fields of a Workspace.
 type WorkspaceParameters struct {
-	ConfigurableField string `json:"configurableField"`
+	ImageID         string `json:"image_id"`
+	OrgID           string `json:"org_id"`
+	ImageTag        string `json:"image_tag"`
+	CPUCores        string `json:"cpu_cores"`
+	MemoryGB        string `json:"memory_gb"`
+	DiskGB          int    `json:"disk_gb"`
+	GPUs            int    `json:"gpus"`
+	UseContainerVM  bool   `json:"use_container_vm"`
+	ResourcePoolID  string `json:"resource_pool_id"`
+	Namespace       string `json:"namespace"`
+	EnableAutoStart bool   `json:"autostart_enabled"`
+
+	// ForUserID is an optional param to create a workspace for another user
+	// other than the requester. This only works for admins and site managers.
+	// +optional
+	ForUserID *string `json:"for_user_id,omitempty"`
+
+	// TemplateID comes from the parse template route on cemanager.
+	// +optional
+	TemplateID *string `json:"template_id,omitempty"`
 }
 
 // WorkspaceObservation are the observable fields of a Workspace.
 type WorkspaceObservation struct {
+	LatestStat      string `json:"latest_stat"`
 	ObservableField string `json:"observableField,omitempty"`
 }
 
