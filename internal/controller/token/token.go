@@ -34,7 +34,7 @@ import (
 
 	"github.com/crossplane/provider-coderworkspaces/apis/coder/v1alpha1"
 	apisv1alpha1 "github.com/crossplane/provider-coderworkspaces/apis/v1alpha1"
-	//@todo muss angepasst werden - remove controller
+	// @todo muss angepasst werden - remove controller
 	"github.com/crossplane/provider-coderworkspaces/internal/features"
 )
 
