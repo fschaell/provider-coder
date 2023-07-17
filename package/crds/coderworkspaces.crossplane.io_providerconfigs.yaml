@@ -43,6 +43,8 @@ spec:
           spec:
             description: A ProviderConfigSpec defines the desired state of a ProviderConfig.
             properties:
+              coder_url:
+                type: string
               credentials:
                 description: Credentials required to authenticate to this provider.
                 properties:
@@ -97,6 +99,7 @@ spec:
                 - source
                 type: object
             required:
+            - coder_url
             - credentials
             type: object
           status:

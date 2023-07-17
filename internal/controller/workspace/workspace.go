@@ -19,6 +19,7 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"os/exec"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -50,14 +51,19 @@ const (
 
 // A CoderService does nothing.
 type CoderService struct {
-	pCLI *resty.Client
+	pCLI     *resty.Client
+	token    string
+	coderurl string
 }
 
 var (
-	newCoderService = func(creds []byte) (*CoderService, error) {
+	newCoderService = func(creds []byte, coderURL string) (*CoderService, error) {
 		client := resty.New()
+
 		return &CoderService{
-			pCLI: client,
+			pCLI:     client,
+			token:    string(creds),
+			coderurl: coderURL,
 		}, nil
 	}
 )
@@ -95,7 +101,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 type connector struct {
 	kube         client.Client
 	usage        resource.Tracker
-	newServiceFn func(creds []byte) (*CoderService, error)
+	newServiceFn func(creds []byte, coderUrl string) (*CoderService, error)
 }
 
 // Connect typically produces an ExternalClient by:
@@ -123,8 +129,7 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	if err != nil {
 		return nil, errors.Wrap(err, errGetCreds)
 	}
-
-	svc, err := c.newServiceFn(data)
+	svc, err := c.newServiceFn(data, pc.Spec.CoderUrl)
 	if err != nil {
 		return nil, errors.Wrap(err, errNewClient)
 	}
@@ -145,9 +150,23 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	if !ok {
 		return managed.ExternalObservation{}, errors.New(errNotWorkspace)
 	}
+	workspace_name := mg.GetName()
 
 	// These fmt statements should be removed in the real implementation.
 	fmt.Printf("Observing: %+v", cr)
+	resp, _ := c.service.pCLI.
+		SetHostURL(c.service.coderurl).
+		R().EnableTrace().
+		SetHeader("Accept", "application/json").
+		SetHeader("Coder-Session-Token", c.service.token).
+		Get("/api/v2/users/me/workspace/" + workspace_name)
+	if resp.StatusCode() != 200 {
+		return managed.ExternalObservation{
+			ResourceExists:    false,
+			ResourceUpToDate:  false,
+			ConnectionDetails: managed.ConnectionDetails{},
+		}, nil
+	}
 
 	return managed.ExternalObservation{
 		// Return false when the external resource does not exist. This lets
@@ -172,23 +191,25 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalCreation{}, errors.New(errNotWorkspace)
 	}
 
-	fmt.Printf("Creating: %+v")
-	fmt.Println()
-	fmt.Println("\n  Namespace      :", cr.Spec.ForProvider.Namespace)
-	fmt.Println("\n  EnableAutoStart:", cr.Spec.ForProvider.EnableAutoStart)
-	fmt.Println()
-	resp, err := c.service.pCLI.R().EnableTrace().Get("https://httpbin.org/get")
+	// POST JSON string
+	// No need to set content type, if you have client level setting
+	org_id := "e306ac17-fba7-4e13-9de8-5adb1507361d"
+	template_id := "a340f9ed-5076-48bd-b59b-91e3fae29518"
 
-	// Explore response object
-	fmt.Println("Response Info:")
-	fmt.Println("  Error      :", err)
-	fmt.Println("  Status Code:", resp.StatusCode())
-	fmt.Println("  Status     :", resp.Status())
-	fmt.Println("  Proto      :", resp.Proto())
-	fmt.Println("  Time       :", resp.Time())
-	fmt.Println("  Received At:", resp.ReceivedAt())
-	fmt.Println("  Body       :\n", resp)
-	fmt.Println()
+	fmt.Printf("Creating: %+v")
+	resp, _ := c.service.pCLI.
+		SetHostURL(c.service.coderurl).
+		R().EnableTrace().
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		SetHeader("Coder-Session-Token", c.service.token).
+		SetBody(`{"template_id":"` + template_id + `","name":"` + cr.GetName() + `"}`).
+		//SetResult(&AuthSuccess{}).    // or SetResult(AuthSuccess{}).
+		//SetError(&AuthError{}).       // or SetError(AuthError{}).
+		Post("/api/v2/organizations/" + org_id + "/members/me/workspaces")
+	if resp.StatusCode() != 201 {
+		return managed.ExternalCreation{}, errors.New(errNotWorkspace)
+	}
 
 	return managed.ExternalCreation{
 		// Optionally return any details that may be required to connect to the
@@ -219,6 +240,16 @@ func (c *external) Delete(ctx context.Context, mg resource.Managed) error {
 	}
 
 	fmt.Printf("Deleting: %+v", cr)
+
+	cmd := exec.Command("/usr/local/bin/coder", "delete", "frank/"+cr.GetName(), "--yes",
+		"--url", c.service.coderurl, "--token", c.service.token)
+	out, err := cmd.Output()
+	if err != nil {
+		// if there was any error, print it here
+		fmt.Println("could not run command: ", err)
+	}
+
+	fmt.Println("Output: ", string(out))
 
 	return nil
 }

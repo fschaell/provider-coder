@@ -2,8 +2,7 @@
 # Setup Project
 PROJECT_NAME := provider-coderworkspaces
 PROJECT_REPO := github.com/crossplane/$(PROJECT_NAME)
-DOCKER_REGISTRY = mtr.devops.telekom.de/idp
-
+DOCKER_REGISTRY ?= crossplane2
 PLATFORMS ?= linux_amd64 linux_arm64
 -include build/makelib/common.mk
 

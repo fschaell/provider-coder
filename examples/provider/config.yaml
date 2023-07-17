@@ -2,19 +2,20 @@ apiVersion: v1
 kind: Secret
 metadata:
   namespace: crossplane-system
-  name: example-provider-secret
+  name: fschaell-provider-secret
 type: Opaque
 data:
-  # credentials: BASE64ENCODED_PROVIDER_CREDS
+   credentials: ZmxBUFJDdU1aWi03NzBBYzJhUFl3ZjZ1cGpadmpzUzBQ
 ---
 apiVersion: coderworkspaces.crossplane.io/v1alpha1
 kind: ProviderConfig
 metadata:
   name: example
 spec:
+  coder_url: http://host.docker.internal:9090
   credentials:
     source: Secret
     secretRef:
       namespace: crossplane-system
-      name: example-provider-secret
+      name: fschaell-provider-secret
       key: credentials

@@ -1,7 +1,7 @@
 apiVersion: coder.coderworkspaces.crossplane.io/v1alpha1
 kind: Workspace
 metadata:
-  name: my-new-workspace-horst-2
+  name: my-new-workspace-0830
   namespace: crossplane-system
 spec:
   forProvider:
