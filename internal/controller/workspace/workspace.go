@@ -18,8 +18,10 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -191,22 +193,72 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalCreation{}, errors.New(errNotWorkspace)
 	}
 
+	var templates []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+
 	// POST JSON string
 	// No need to set content type, if you have client level setting
-	org_id := "e306ac17-fba7-4e13-9de8-5adb1507361d"
-	template_id := "a340f9ed-5076-48bd-b59b-91e3fae29518"
 
 	fmt.Printf("Creating: %+v")
+
+	username := strings.ReplaceAll(cr.Spec.ForProvider.UserName, ".", "")
+	fmt.Printf("get User")
+	var user struct {
+		ID               string   `json:"id"`
+		Name             string   `json:"name"`
+		Organization_ids []string `json:"organization_ids"`
+	}
+
+	resp_user, _ := c.service.pCLI.
+		SetHostURL(c.service.coderurl).
+		R().EnableTrace().
+		SetHeader("Accept", "application/json").
+		SetHeader("Coder-Session-Token", c.service.token).
+		Get("/api/v2/users/" + username)
+
+	if err := json.Unmarshal(resp_user.Body(), &user); err != nil {
+		return managed.ExternalCreation{}, fmt.Errorf("failed to decode user response: %w", err)
+	}
+
+	fmt.Printf("get Templates")
+	resp_temp, _ := c.service.pCLI.
+		SetHostURL(c.service.coderurl).
+		R().EnableTrace().
+		SetHeader("Accept", "application/json").
+		SetHeader("Coder-Session-Token", c.service.token).
+		Get("/api/v2/organizations/" + user.Organization_ids[0] + "/templates")
+
+	//iterate over resp_temp and find the template_id
+	fmt.Printf("get Templates")
+	// Decode the response body into the templates slice
+	if err := json.Unmarshal(resp_temp.Body(), &templates); err != nil {
+		return managed.ExternalCreation{}, fmt.Errorf("failed to decode templates response: %w", err)
+	}
+
+	var templateID string
+	for _, template := range templates {
+		if template.Name == cr.Spec.ForProvider.Template {
+			templateID = template.ID
+			break
+		}
+	}
+
+	if templateID == "" {
+		return managed.ExternalCreation{}, errors.New("template not found")
+	}
+
 	resp, _ := c.service.pCLI.
 		SetHostURL(c.service.coderurl).
 		R().EnableTrace().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
 		SetHeader("Coder-Session-Token", c.service.token).
-		SetBody(`{"template_id":"` + template_id + `","name":"` + cr.GetName() + `"}`).
+		SetBody(`{"template_id":"` + templateID + `","name":"` + cr.GetName() + `"}`).
 		//SetResult(&AuthSuccess{}).    // or SetResult(AuthSuccess{}).
 		//SetError(&AuthError{}).       // or SetError(AuthError{}).
-		Post("/api/v2/organizations/" + org_id + "/members/me/workspaces")
+		Post("/api/v2/organizations/" + user.Organization_ids[0] + "/members/me/workspaces")
 	if resp.StatusCode() != 201 {
 		return managed.ExternalCreation{}, errors.New(errNotWorkspace)
 	}
@@ -241,7 +293,8 @@ func (c *external) Delete(ctx context.Context, mg resource.Managed) error {
 
 	fmt.Printf("Deleting: %+v", cr)
 
-	cmd := exec.Command("/usr/local/bin/coder", "delete", "frank/"+cr.GetName(), "--yes",
+	username := strings.ReplaceAll(cr.Spec.ForProvider.UserName, ".", "")
+	cmd := exec.Command("/usr/local/bin/coder", "delete", username+"/"+cr.GetName(), "--yes",
 		"--url", c.service.coderurl, "--token", c.service.token)
 	out, err := cmd.Output()
 	if err != nil {

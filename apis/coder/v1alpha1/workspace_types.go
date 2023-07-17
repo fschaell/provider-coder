@@ -25,26 +25,8 @@ import (
 
 // WorkspaceParameters are the configurable fields of a Workspace.
 type WorkspaceParameters struct {
-	ImageID         string `json:"image_id"`
-	OrgID           string `json:"org_id"`
-	ImageTag        string `json:"image_tag"`
-	CPUCores        string `json:"cpu_cores"`
-	MemoryGB        string `json:"memory_gb"`
-	DiskGB          int    `json:"disk_gb"`
-	GPUs            int    `json:"gpus"`
-	UseContainerVM  bool   `json:"use_container_vm"`
-	ResourcePoolID  string `json:"resource_pool_id"`
-	Namespace       string `json:"namespace"`
-	EnableAutoStart bool   `json:"autostart_enabled"`
-
-	// ForUserID is an optional param to create a workspace for another user
-	// other than the requester. This only works for admins and site managers.
-	// +optional
-	ForUserID *string `json:"for_user_id,omitempty"`
-
-	// TemplateID comes from the parse template route on cemanager.
-	// +optional
-	TemplateID *string `json:"template_id,omitempty"`
+	Template string `json:"template"`
+	UserName string `json:"user_name"`
 }
 
 // WorkspaceObservation are the observable fields of a Workspace.
