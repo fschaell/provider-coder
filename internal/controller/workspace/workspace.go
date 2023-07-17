@@ -258,9 +258,9 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 		SetBody(`{"template_id":"` + templateID + `","name":"` + cr.GetName() + `"}`).
 		//SetResult(&AuthSuccess{}).    // or SetResult(AuthSuccess{}).
 		//SetError(&AuthError{}).       // or SetError(AuthError{}).
-		Post("/api/v2/organizations/" + user.Organization_ids[0] + "/members/me/workspaces")
+		Post("/api/v2/organizations/" + user.Organization_ids[0] + "/members/" + user.ID + "/workspaces")
 	if resp.StatusCode() != 201 {
-		return managed.ExternalCreation{}, errors.New(errNotWorkspace)
+		return managed.ExternalCreation{}, fmt.Errorf("could not create workspace: %w", user.Name)
 	}
 
 	return managed.ExternalCreation{
