@@ -10,4 +10,4 @@ metadata:
       A coderworkspaces that can be used to create Crossplane providers.
 spec:
   controller:
-    image: mtr.devops.telekom.de/idp/provider-coderworkspaces:v0.0.4
+    image: mtr.devops.telekom.de/idp/provider-coderworkspaces:v0.0.5
