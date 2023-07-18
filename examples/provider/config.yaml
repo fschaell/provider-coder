@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   namespace: crossplane-system
-  name: fschaell-provider-secret
+  name: coderworkspaces-provider-secret
 type: Opaque
 data:
    credentials: ZmxBUFJDdU1aWi03NzBBYzJhUFl3ZjZ1cGpadmpzUzBQ
@@ -10,12 +10,12 @@ data:
 apiVersion: coderworkspaces.crossplane.io/v1alpha1
 kind: ProviderConfig
 metadata:
-  name: example
+  name: coderworkspaces-provider-config
 spec:
   coder_url: http://host.docker.internal:9090
   credentials:
     source: Secret
     secretRef:
       namespace: crossplane-system
-      name: fschaell-provider-secret
+      name: coderworkspaces-provider-secret
       key: credentials

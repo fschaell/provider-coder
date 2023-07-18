@@ -1,0 +1,58 @@
+# This file is a template, and might need editing before it works on your project.
+# You can copy and paste this template into a new `.gitlab-ci.yml` file.
+# You should not add this template to an existing `.gitlab-ci.yml` file by using the `include:` keyword.
+#
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
+variables:
+  BUILD_REGISTRY: mtr.devops.telekom.de/idp
+  XPKG_REG_ORGS: $BUILD_REGISTRY
+
+
+image: golang:1.20.5-alpine3.18
+
+
+
+default:
+    tags:
+        - otc_run_docker_l
+
+stages:
+
+  - build
+  - deploy
+
+.pre-build:
+  before_script:
+    - apk add --update --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community docker-cli make bash git curl docker-cli-buildx containerd openssl
+    - curl https://download.docker.com/linux/static/stable/x86_64/docker-24.0.2.tgz --output docker-24.0.2.tgz
+    - tar xzvf docker-24.0.2.tgz
+    - cp docker/* /usr/bin/
+    - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    - chmod 700 get_helm.sh
+    - ./get_helm.sh
+    - docker -v
+
+compile:
+  extends: .pre-build
+  stage: build
+  script:
+    - make build.all --debug
+    - export PLATFORMS=linux_amd64
+    - make publish --debug
+  when: always
+  artifacts:
+    paths:
+      - _output
+
+deploy:
+  extends: .pre-build
+  stage: deploy
+  script:
+    - ls -la _output
+    - export PLATFORMS=linux_amd64
+    - make publish --debug
+  only:
+    - tags

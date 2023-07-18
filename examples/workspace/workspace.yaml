@@ -9,4 +9,4 @@ spec:
     user_name: "frank"
 
   providerConfigRef:
-    name: example
+    name: coderworkspaces-provider-secret
